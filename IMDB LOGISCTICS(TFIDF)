@@ -1,0 +1,39 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import re
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report, roc_auc_score, roc_curve
+file_path = "C:\\Users\\91931\\OneDrive\\Desktop\\BIA PROJECT\\IMDB Dataset.xlsx"  # Update path
+data = pd.read_excel(file_path)
+print(data.head())
+def clean_text(text):
+    text = re.sub(r'<.*?>', '', text)  # Remove HTML tags
+    text = text.lower()  # Convert to lowercase
+    text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation & special characters
+    return text
+data['cleaned_review'] = data['review'].astype(str).apply(clean_text)
+label_encoder = LabelEncoder()
+data['sentiment_encoded'] = label_encoder.fit_transform(data['sentiment'])
+X_train, X_test, y_train, y_test = train_test_split(data['cleaned_review'], 
+                                                    data['sentiment_encoded'], 
+                                                    test_size=0.2, random_state=42)
+tfidf_vectorizer = TfidfVectorizer(stop_words="english", max_features=5000)
+X_train_tfidf = tfidf_vectorizer.fit_transform(X_train)
+X_test_tfidf = tfidf_vectorizer.transform(X_test)
+log_reg = LogisticRegression()
+log_reg.fit(X_train_tfidf, y_train)
+y_pred = log_reg.predict(X_test_tfidf)
+y_probs = log_reg.predict_proba(X_test_tfidf)[:, 1]
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Accuracy: {accuracy:.4f}")
+
+# Classification Report
+print("Classification Report:\n", classification_report(y_test, y_pred))
+
+# Compute AUC Score
+auc_score = roc_auc_score(y_test, y_probs)
+print(f"AUC Score: {auc_score:.4f}")
+
